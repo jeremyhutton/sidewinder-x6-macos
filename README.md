@@ -13,6 +13,14 @@ Protocol matches the Linux userspace driver ([Wattos/LinuxSidewinderX6](https://
 
 ## Install
 
+**Prebuilt app** (other Macs): download the zip from
+[Releases](https://cursor.com/codebase/vjh/sidewinder-x6-macos),
+unzip, double-click `install.command`. That copies `SidewinderX6.app` to
+`/Applications`, starts it at login, and opens Accessibility settings.
+Apple Silicon and Intel Macs, macOS 13+.
+
+**From source:**
+
 ```bash
 cd sidewinder-x6-macos
 make install

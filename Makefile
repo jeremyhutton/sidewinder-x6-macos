@@ -1,4 +1,5 @@
 APP_NAME = SidewinderX6
+VERSION = 1.0.0
 BUNDLE = build/$(APP_NAME).app
 INSTALL_APP = /Applications/$(APP_NAME).app
 LAUNCH_AGENT = $(HOME)/Library/LaunchAgents/com.vjh.sidewinder-x6.plist
@@ -6,16 +7,21 @@ SWIFTC ?= swiftc
 SWIFT_FILES = $(wildcard Sources/*.swift)
 FRAMEWORKS = -framework AppKit -framework IOKit -framework CoreFoundation -framework ApplicationServices -framework CoreGraphics
 CFLAGS = -O -whole-module-optimization
+MIN_OS = 13.0
+DIST_DIR = dist/$(APP_NAME)-$(VERSION)
+DIST_ZIP = dist/$(APP_NAME)-$(VERSION)-macos.zip
 
-.PHONY: all app install uninstall listen clean
+.PHONY: all app dist install uninstall listen clean
 
 all: app
 
 app: $(BUNDLE)/Contents/MacOS/$(APP_NAME)
 
 $(BUNDLE)/Contents/MacOS/$(APP_NAME): $(SWIFT_FILES) Resources/Info.plist Resources/AppIcon.icns
-	mkdir -p $(BUNDLE)/Contents/MacOS $(BUNDLE)/Contents/Resources
-	$(SWIFTC) $(CFLAGS) -o $@ $(SWIFT_FILES) $(FRAMEWORKS)
+	mkdir -p $(BUNDLE)/Contents/MacOS $(BUNDLE)/Contents/Resources build/bin
+	$(SWIFTC) $(CFLAGS) -target arm64-apple-macos$(MIN_OS) -o build/bin/$(APP_NAME)-arm64 $(SWIFT_FILES) $(FRAMEWORKS)
+	$(SWIFTC) $(CFLAGS) -target x86_64-apple-macos$(MIN_OS) -o build/bin/$(APP_NAME)-x86_64 $(SWIFT_FILES) $(FRAMEWORKS)
+	lipo -create -output $@ build/bin/$(APP_NAME)-arm64 build/bin/$(APP_NAME)-x86_64
 	cp Resources/Info.plist $(BUNDLE)/Contents/Info.plist
 	cp Resources/config.example.json $(BUNDLE)/Contents/Resources/config.example.json
 	cp Resources/AppIcon.icns $(BUNDLE)/Contents/Resources/AppIcon.icns
@@ -24,6 +30,17 @@ $(BUNDLE)/Contents/MacOS/$(APP_NAME): $(SWIFT_FILES) Resources/Info.plist Resour
 		--identifier com.vjh.sidewinder-x6 \
 		--requirements '=designated => identifier "com.vjh.sidewinder-x6"' \
 		$(BUNDLE)
+
+dist: app
+	rm -rf $(DIST_DIR) $(DIST_ZIP)
+	mkdir -p $(DIST_DIR)
+	cp -R $(BUNDLE) $(DIST_DIR)/
+	cp LaunchAgents/com.vjh.sidewinder-x6.plist $(DIST_DIR)/
+	cp scripts/install.command $(DIST_DIR)/
+	chmod +x $(DIST_DIR)/install.command
+	ditto -c -k --keepParent $(DIST_DIR) $(DIST_ZIP)
+	@echo "Wrote $(DIST_ZIP)"
+	@lipo -info $(BUNDLE)/Contents/MacOS/$(APP_NAME)
 
 install: app
 	mkdir -p "$(HOME)/Library/Application Support/SidewinderX6"
@@ -50,4 +67,4 @@ listen: app
 	$(BUNDLE)/Contents/MacOS/$(APP_NAME) --listen
 
 clean:
-	rm -rf build
+	rm -rf build dist
